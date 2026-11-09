@@ -1,0 +1,173 @@
+<div align="center">
+
+# TikDrop
+
+### Your TikTok videos, on your computer.
+
+A small, free and open source Windows app.<br>
+Paste your links. Pick a folder. Download your videos.
+
+[![Release](https://img.shields.io/github/v/release/Nagaraaa/TikDrop?style=flat-square&color=24d6b5)](https://github.com/Nagaraaa/TikDrop/releases/latest)
+[![Windows](https://img.shields.io/badge/Windows-64_bit-293147?style=flat-square)](#installation)
+[![MIT License](https://img.shields.io/badge/License-MIT-293147?style=flat-square)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-293147?style=flat-square)](#run-from-source)
+
+[Français](README.md) · **English**
+
+**[Download for Windows](https://github.com/Nagaraaa/TikDrop/releases/latest/download/TikDrop-Windows.zip)** · [All releases](https://github.com/Nagaraaa/TikDrop/releases)
+
+<img src="docs/images/tikdrop-windows.jpg" alt="TikDrop on Windows after a successful download, showing the destination folder and progress." width="760">
+
+*Actual application screenshot after a successful download. The current app interface is in French.*
+
+</div>
+
+## Why TikDrop?
+
+| Feature | What you can do |
+| --- | --- |
+| **Simple** | Paste a TikTok link or the full text of a shared post. |
+| **Multiple videos** | Add several links and download them one after another. |
+| **Your folder** | Choose where to save your videos. |
+| **Live feedback** | See progress, download speed and the result for each video. |
+| **Resume** | Retry partial downloads without overwriting existing files. |
+| **Portable** | Use the Windows build without installing Python or FFmpeg. |
+
+No ads, added telemetry or API key required. TikDrop does not ask for your password or access to your browser cookies. Downloads use the open source [yt-dlp](https://github.com/yt-dlp/yt-dlp) engine.
+
+## Installation
+
+### Windows — the easiest way
+
+**64-bit Windows build, tested on Windows 11.** An Internet connection is required.
+
+1. Download **[TikDrop-Windows.zip](https://github.com/Nagaraaa/TikDrop/releases/latest/download/TikDrop-Windows.zip)**.
+2. Right-click the archive and select **Extract All…**.
+3. Open the extracted **TikDrop** folder.
+4. Double-click **TikDrop.exe**.
+
+You are ready to go: no terminal commands or Python installation needed.
+
+> **Keep the entire folder.** The `_internal` folder must stay next to `TikDrop.exe`. Do not run the app from inside the ZIP. The executable in this first release is not digitally signed.
+
+```text
+TikDrop/
+├── TikDrop.exe       ← run this file
+├── _internal/        ← required to run the app
+├── licenses/
+└── README.md
+```
+
+## How to use
+
+The current interface is in French. These are the steps and labels you will see:
+
+1. On TikTok, copy a video's link using **Share → Copy link**.
+2. Click **Coller le presse-papiers** (Paste clipboard), or paste directly into TikDrop.
+3. To download several videos, add one link per line.
+4. Click **Parcourir…** (Browse) to choose your destination folder.
+5. Click **Télécharger les vidéos** (Download videos), then wait for **Enregistrée ✓** (Saved).
+6. Click **Ouvrir** (Open) to find your files.
+
+**Annuler** (Cancel) stops the current batch. A `.part` file may remain in the folder: retrying can resume it, or you can delete it.
+
+### Supported links
+
+```text
+https://www.tiktok.com/@creator/video/1234567890123456789
+https://vm.tiktok.com/…
+https://vt.tiktok.com/…
+https://www.tiktok.com/t/…
+```
+
+These addresses illustrate supported formats: use your video's actual link. Sharing parameters are removed and identical links are deduplicated. Filenames include the creator's name and video ID.
+
+## Troubleshooting
+
+| Problem | What to do |
+| --- | --- |
+| The app will not open, or reports a missing file | Extract the **entire** archive and keep `_internal` next to the executable. |
+| A link is rejected | Use an individual video link, rather than a profile or live stream. |
+| “IP blocked”, “403” or login required | Check that the video is public and accessible in your browser. Retry later and check for newer TikDrop releases. Access is not guaranteed on every network. |
+| There is a `.part` file | The download was interrupted. Retry with the same folder to attempt a resume. |
+| An existing video is not replaced | This is intentional: existing files are not overwritten. |
+
+Still having trouble? [Open an issue](https://github.com/Nagaraaa/TikDrop/issues) with your Windows version, TikDrop version and the error message. Do not post passwords, cookies or private information.
+
+## Run from source
+
+**Requirements: Python 3.10 or later with Tkinter.** Tested environment: Python 3.12 on Windows. Internet access is needed to install dependencies.
+
+Download the [sources from the release](https://github.com/Nagaraaa/TikDrop/releases/latest) or clone the repository:
+
+```powershell
+git clone https://github.com/Nagaraaa/TikDrop.git
+cd TikDrop
+```
+
+On Windows, open **Lancer.cmd**: it creates a local Python environment and installs dependencies on the first run. Alternatively, use PowerShell from the source folder:
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe app.py
+```
+
+<details>
+<summary>Linux and macOS — running from source</summary>
+
+The supplied portable build targets Windows. Running on Linux and macOS has not been validated. Tkinter must be available in your Python installation.
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python app.py
+```
+
+</details>
+
+## Development
+
+| File | Purpose |
+| --- | --- |
+| `app.py` | Tkinter interface and download queue. |
+| `core.py` | Link validation and yt-dlp integration. |
+| `test_core.py` | Engine tests using simulated data. |
+| `Construire.cmd` | Windows build using PyInstaller. |
+
+Each video downloads in a subprocess to keep the interface responsive and allow cancellation.
+
+**Run tests:**
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest -v
+```
+
+**Build for Windows:** open `Construire.cmd`. Output is placed in `dist\TikDrop`; distribute that entire folder.
+
+**Update the engine when running from source:**
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install --upgrade yt-dlp curl-cffi
+```
+
+To distribute the update, update the versions in `requirements.txt` and rebuild the app. The portable build does not update itself automatically.
+
+## Scope and limitations
+
+- Individual public videos only: no full profiles, live streams or photo slideshows.
+- No private content downloads or bypass of mandatory login.
+- TikTok may deny access depending on the video, network, region or its protections.
+- A combined audio/video file, preferably MP4, without requiring FFmpeg.
+- The highest resolution across separate tracks and the absence of a watermark are not guaranteed. TikDrop does not add watermark removal.
+- The current app interface is in French; some yt-dlp messages are in English.
+
+The user has confirmed that the app works. Local checks and their limitations are documented in [VERIFICATION.md](VERIFICATION.md) (French).
+
+## License and credits
+
+TikDrop is distributed under the [MIT License](LICENSE). Dependencies retain their own licenses: see [THIRD_PARTY.md](THIRD_PARTY.md).
+
+Built with **Python**, **Tkinter**, **yt-dlp** and **curl-cffi**. An independent project with no affiliation to TikTok.
+
+Download your own creations or content you have the rights to download.
