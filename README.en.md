@@ -35,7 +35,7 @@ Paste your links. Pick a folder. Download your videos.
 | **Resume** | Retry partial downloads without overwriting existing files. |
 | **Portable** | Use the Windows build without installing Python or FFmpeg. |
 
-No ads, added telemetry or API key required. TikDrop does not ask for your password or access to your browser cookies. Downloads use the open source [yt-dlp](https://github.com/yt-dlp/yt-dlp) engine.
+No ads, added telemetry or API key required. TikDrop does not ask for your password or access to your browser cookies. Downloads use the open source [yt-dlp](https://github.com/yt-dlp/yt-dlp) engine. At startup, TikDrop only asks GitHub for the latest version number, with no identifier, to tell you about updates (can be turned off: `"check_updates": false` in `%APPDATA%\TikDrop\settings.json`).
 
 ## Installation
 

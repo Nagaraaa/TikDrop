@@ -2,6 +2,8 @@
 
 Petite application de bureau en français pour télécharger des vidéos TikTok
 publiques à partir de liens. Code sous licence MIT, sans publicité ni télémétrie.
+Au démarrage, seul le numéro de la dernière version est demandé à GitHub pour
+signaler une mise à jour (`"check_updates": false` dans `settings.json` pour l’éviter).
 Les requêtes vont directement vers les services nécessaires à yt-dlp/TikTok.
 Aucun mot de passe, cookie de navigateur ou clé API demandé.
 

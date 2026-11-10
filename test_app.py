@@ -112,6 +112,35 @@ class ReportTests(unittest.TestCase):
         self.assertIn('Détail : détail Y', text)
 
 
+class UpdateTests(unittest.TestCase):
+    PAGE = 'https://github.com/Nagaraaa/TikDrop/releases/tag/v'
+
+    def check(self, tag, current='1.2.0', url=None):
+        release = {'tag_name': tag, 'html_url': url or self.PAGE + tag.lstrip('v')}
+        with mock.patch.object(app, 'VERSION', current):
+            return app.newer_release(lambda: release)
+
+    def test_versions_compare_as_numbers(self):
+        self.assertEqual(app.parse_version('v1.10.0'), (1, 10, 0))
+        self.assertGreater(app.parse_version('1.10.0'), app.parse_version('1.9.9'))
+        self.assertIsNone(app.parse_version('v2.0.0-beta'))
+
+    def test_newer_release_is_offered(self):
+        self.assertEqual(self.check('v1.10.0', current='1.9.0'), ('1.10.0', self.PAGE + '1.10.0'))
+
+    def test_same_older_or_odd_releases_are_ignored(self):
+        for tag in ('v1.2.0', 'v1.1.9', 'v9.0.0-rc1', 'nightly'):
+            with self.subTest(tag=tag):
+                self.assertIsNone(self.check(tag))
+        self.assertIsNone(self.check('v9.0.0', url='https://example.com/piege'))
+
+    def test_failures_are_silent(self):
+        def offline():
+            raise OSError('no network')
+        self.assertIsNone(app.newer_release(offline))
+        self.assertIsNone(app.newer_release(lambda: {'message': 'API rate limit exceeded'}))
+
+
 class InterfaceTests(unittest.TestCase):
     """Behaviour of the real window (skipped without a display)."""
 
@@ -156,6 +185,19 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(row.badge.cget('text'), 'Téléchargement…')
         row.progress({'percent': 42.4, 'total': 100})
         self.assertEqual(row.badge.cget('text'), '42 %')
+
+
+    def test_update_turns_the_version_into_a_link(self):
+        self.app._offer_update(None)
+        self.assertEqual(self.app.version_lbl.cget('text'), 'v' + app.VERSION)
+        with mock.patch.object(app.webbrowser, 'open') as browser:
+            self.app._offer_update(('9.0.0', 'https://github.com/Nagaraaa/TikDrop/releases/tag/v9.0.0'))
+            self.assertEqual(self.app.version_lbl.cget('text'), 'Nouvelle version 9.0.0 →')
+            self.app.deiconify()  # mouse events only reach a visible window
+            self.app.update()
+            self.app.version_lbl.event_generate('<Button-1>', x=2, y=2)
+            self.app.update()
+            browser.assert_called_once_with('https://github.com/Nagaraaa/TikDrop/releases/tag/v9.0.0')
 
 
 if __name__ == '__main__':

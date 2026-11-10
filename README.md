@@ -35,7 +35,7 @@ Colle tes liens. Choisis ton dossier. Télécharge tes vidéos.
 | **Reprise** | Relancer un téléchargement partiel sans écraser les fichiers déjà présents. |
 | **Portable** | Utiliser la version Windows sans installer Python ni FFmpeg. |
 
-Pas de publicité, de télémétrie ajoutée ou de clé API à fournir. TikDrop ne demande ni mot de passe ni accès aux cookies de ton navigateur. Le téléchargement utilise le moteur open source [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+Pas de publicité, de télémétrie ajoutée ou de clé API à fournir. TikDrop ne demande ni mot de passe ni accès aux cookies de ton navigateur. Le téléchargement utilise le moteur open source [yt-dlp](https://github.com/yt-dlp/yt-dlp). Au démarrage, TikDrop demande seulement à GitHub le numéro de la dernière version, sans identifiant, pour te signaler une mise à jour (désactivable : `"check_updates": false` dans `%APPDATA%\TikDrop\settings.json`).
 
 ## Installation
 
