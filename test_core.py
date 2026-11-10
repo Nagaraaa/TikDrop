@@ -71,6 +71,11 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(links, [URL])
         self.assertEqual(rejected, ['https://example.com/a', 'https://www.tiktok.com/@moi'])
 
+    def test_trailing_punctuation_is_ignored(self):
+        for text in (f'[{URL}]', f'({URL})', f'"{URL}"', f"'{URL}'", f'{URL}:', f'{URL}…'.replace('…', '.')):
+            with self.subTest(text=text):
+                self.assertEqual(parse_links(text), [URL])
+
     def test_bad_port_is_rejected_not_crashing(self):
         self.assertEqual(scan_links('https://www.tiktok.com:99999/@a/video/1'), ([], ['https://www.tiktok.com:99999/@a/video/1']))
 
