@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # yt-dlp often needs an update when TikTok changes; each PR runs the tests
+  # and the Windows build.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: daily
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
