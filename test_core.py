@@ -1,3 +1,4 @@
+import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
@@ -77,6 +78,40 @@ class CoreTests(unittest.TestCase):
         self.assertIn('réseau', friendly_error('ERROR: [TikTok] 6748451240264420610: Your IP address is blocked from accessing this post'))
         self.assertIn('supprimée', friendly_error('ERROR: [TikTok] 1: Video not available, status code 10204'))
         self.assertEqual(friendly_error('ERROR: quelque chose de neuf'), 'quelque chose de neuf')
+
+    def test_specific_errors_win_over_broad_ones(self):
+        self.assertIn('diaporama', friendly_error('ERROR: [TikTok] 1: Requested format is not available. '
+                                                  'Use --list-formats for a list of available formats'))
+        self.assertIn('connexion Internet', friendly_error('ERROR: [TikTok] 1: Unable to download webpage: '
+                                                           '<urlopen error [Errno 11001] getaddrinfo failed>'))
+        self.assertIn('mise à jour', friendly_error('ERROR: [TikTok] 1: Unable to extract universal data'))
+
+    @unittest.skipUnless(importlib.util.find_spec('yt_dlp'), 'yt-dlp non installé')
+    def test_prefers_h264_without_watermark(self):
+        from yt_dlp import YoutubeDL
+        captured = {}
+
+        class Capture:
+            def __init__(self, options):
+                captured.update(options)
+                raise RuntimeError('stop')
+        with tempfile.TemporaryDirectory() as folder, self.assertRaises(RuntimeError):
+            download(URL, folder, lambda e: None, Capture)
+        options = {k: captured[k] for k in ('format', 'format_sort')}
+
+        def pick(formats):
+            with YoutubeDL(dict(options, quiet=True, simulate=True)) as ydl:
+                info = {'id': '1', 'title': 't', 'extractor': 'TikTok', 'extractor_key': 'TikTok',
+                        'webpage_url': URL, 'formats': formats}
+                return ydl.process_video_result(info, download=False)['format_id']
+
+        def fmt(fid, vcodec, height, preference=-1):
+            return {'format_id': fid, 'url': 'https://example.com/' + fid, 'ext': 'mp4', 'vcodec': vcodec,
+                    'acodec': 'aac', 'height': height, 'width': height * 9 // 16, 'preference': preference}
+        watermarked = fmt('download', 'h264', 1024, preference=-2)
+        hevc = fmt('bytevc1_1080p', 'h265', 1920)
+        self.assertEqual(pick([watermarked, fmt('h264_540p', 'h264', 1024), hevc]), 'h264_540p')
+        self.assertEqual(pick([watermarked, hevc]), 'bytevc1_1080p')
 
     def test_no_false_success_for_missing_file(self):
         class Missing:

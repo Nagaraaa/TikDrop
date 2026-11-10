@@ -51,14 +51,17 @@ def parse_links(text):
     return links
 
 
+# First match wins: specific needles must come before broad ones
+# ('requested format is not available' before 'not available', network errors
+# before 'unable to download webpage', which wraps them).
 _FRIENDLY = (
     (('ip address is blocked',), 'TikTok bloque cette vidéo depuis ton réseau. Réessaie plus tard ou avec une autre connexion.'),
+    (('requested format is not available', 'no video formats'), 'Aucun format vidéo disponible (diaporama photo ?).'),
     (('log in', 'login', 'private', 'comfortable for some audiences'), 'Cette vidéo n’est pas publique ou demande une connexion.'),
     (('http error 404', 'not available', 'unavailable', 'removed', 'does not exist'), 'Vidéo introuvable : elle a peut-être été supprimée.'),
     (('http error 403',), 'TikTok refuse l’accès à cette vidéo (erreur 403).'),
-    (('requested format is not available', 'no video formats'), 'Aucun format vidéo disponible (diaporama photo ?).'),
-    (('unable to extract', 'unsupported url', 'unable to download webpage'), 'Impossible de lire la page TikTok. Une mise à jour de TikDrop peut être nécessaire.'),
     (('timed out', 'getaddrinfo', 'network is unreachable', 'connection', 'name resolution'), 'Problème de connexion Internet.'),
+    (('unable to extract', 'unsupported url', 'unable to download webpage'), 'Impossible de lire la page TikTok. Une mise à jour de TikDrop peut être nécessaire.'),
     (('errno 28', 'no space left'), 'Plus assez d’espace disque.'),
     (('errno 13', 'permission denied'), 'Impossible d’écrire dans ce dossier.'),
 )
@@ -110,6 +113,8 @@ def download(url, destination, emit, factory=None):
 
     options = {
         'format': 'best[ext=mp4]/best',  # combined audio/video; no FFmpeg dependency
+        # Prefer H.264: TikTok also serves H.265, which Windows only plays with a paid extension.
+        'format_sort': ['vcodec:h264'],
         'outtmpl': str(target / '%(uploader)s_%(id)s.%(ext)s'),
         'windowsfilenames': True, 'noplaylist': True, 'overwrites': False,
         'continuedl': True, 'socket_timeout': 20, 'retries': 2,
