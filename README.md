@@ -135,7 +135,7 @@ python3 -m venv .venv
 | `test_core.py` | Tests du moteur avec des données simulées. |
 | `assets/tikdrop.ico` | Icône de l’exécutable Windows. |
 | `Construire.cmd` | Construction Windows avec PyInstaller. |
-| `distribution/` | README livré dans le ZIP et script d’assemblage de l’archive. |
+| `distribution/` | README livré dans le ZIP, script d’assemblage de l’archive et notes de version (`notes/`). |
 | `.github/` | Intégration continue (GitHub Actions) et Dependabot. |
 
 Les vidéos d’un lot sont téléchargées à la suite dans un sous-processus, qui ne charge le moteur qu’une fois, garde l’interface réactive et permet l’annulation. Le dossier choisi est enregistré dans `%APPDATA%\TikDrop\settings.json` ; les échecs, avec leur détail technique, dans `tikdrop.log` au même endroit (512 Ko au plus).
@@ -158,7 +158,7 @@ Pour distribuer cette mise à jour, actualise les versions dans `requirements.tx
 
 **Intégration continue :** à chaque pull request et sur `main`, GitHub Actions lance les tests (Python 3.12 et 3.14), construit l’exécutable avec `Construire.cmd`, vérifie qu’il démarre et charge le moteur, puis fournit `TikDrop-Windows.zip` en artefact. Dependabot propose chaque jour les nouvelles versions de yt-dlp et curl-cffi sous forme de pull request.
 
-**Publier une version :** mets à jour `VERSION` dans `app.py` (et les versions dans `THIRD_PARTY.md` et `VERIFICATION.md`), puis, sur GitHub, ouvre **Actions → CI → Run workflow**, coche la case de release et lance-le sur `main` (ou pousse un tag `vX.Y.Z` correspondant). Le tag et un brouillon de release sont créés avec `TikDrop-Windows.zip` et `TikDrop-Sources.zip` : complète les notes, puis publie-le.
+**Publier une version :** mets à jour `VERSION` dans `app.py` (et les versions dans `THIRD_PARTY.md` et `VERIFICATION.md`), écris les notes dans `distribution/notes/vX.Y.Z.md`, puis, sur GitHub, ouvre **Actions → CI → Run workflow**, choisis `publish` (ou `draft` pour un brouillon) et lance-le sur `main`. Le tag et la release sont créés avec ces notes, `TikDrop-Windows.zip` et `TikDrop-Sources.zip`. Pousser un tag `vX.Y.Z` crée aussi un brouillon.
 
 ## Périmètre et limites
 

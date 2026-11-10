@@ -8,9 +8,10 @@ on:
   workflow_dispatch:
     inputs:
       release:
-        description: Create the draft release vX.Y.Z (VERSION in app.py) from main
-        type: boolean
-        default: false
+        description: Release vX.Y.Z (VERSION in app.py) from main
+        type: choice
+        options: [none, draft, publish]
+        default: none
 
 permissions:
   contents: read
@@ -74,9 +75,12 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Draft release
-    # A pushed vX.Y.Z tag, or the "Run workflow" button on main with "release" ticked.
-    if: startsWith(github.ref, 'refs/tags/v') || (inputs.release && github.ref == 'refs/heads/main')
+    name: Release
+    # A pushed vX.Y.Z tag (draft), or the "Run workflow" button on main with
+    # release = draft or publish.
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.ref == 'refs/heads/main' && (inputs.release == 'draft' || inputs.release == 'publish'))
     needs: windows
     runs-on: ubuntu-latest
     permissions:
@@ -95,14 +99,19 @@ jobs:
         with:
           name: TikDrop-Windows
           path: release
-      - name: Create draft release
+      - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
+          PUBLISH: ${{ inputs.release == 'publish' }}
         run: |
           if [ "$GITHUB_REF_TYPE" = branch ]; then
             # Fails if the tag already exists, so a release is never moved silently.
             gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA" --silent \
               || { echo "::error::Tag $TAG already exists: bump VERSION in app.py first"; exit 1; }
           fi
+          # French notes from distribution/notes/vX.Y.Z.md when present.
+          notes=distribution/notes/$TAG.md
+          if [ -f "$notes" ]; then set -- --notes-file "$notes"; else set -- --generate-notes; fi
+          if [ "$PUBLISH" != true ]; then set -- "$@" --draft; fi
           gh release create "$TAG" release/TikDrop-Windows.zip release/TikDrop-Sources.zip \
-            --draft --title "TikDrop $TAG" --generate-notes
+            --title "TikDrop $TAG" "$@"
