@@ -1,7 +1,12 @@
 import importlib.util
+import io
+import json
+from contextlib import redirect_stdout
+from unittest import mock
 import tempfile
 import unittest
 from pathlib import Path
+import core
 from core import download, friendly_error, parse_links, scan_links
 
 URL = 'https://www.tiktok.com/@test/video/123456789'
@@ -141,6 +146,26 @@ class CoreTests(unittest.TestCase):
                 return 'does-not-exist-123456789.mp4'
         with tempfile.TemporaryDirectory() as folder, self.assertRaises(RuntimeError):
             download(URL, folder, lambda e: None, Missing)
+
+
+    def test_worker_downloads_every_url_from_stdin(self):
+        other = 'https://vm.tiktok.com/ABC12'
+        def fake_download(url, destination, emit):
+            if url == other:
+                raise RuntimeError('ERROR: [TikTok] 1: Video not available')
+            emit({'type': 'done', 'path': 'x.mp4'})
+        out = io.StringIO()
+        with mock.patch.object(core, 'download', fake_download), \
+                mock.patch('sys.stdin', io.StringIO(f'{URL}\n{other}\n')), redirect_stdout(out):
+            code = core.worker('dossier')
+        events = [json.loads(line) for line in out.getvalue().splitlines()]
+        self.assertEqual(code, 1)
+        self.assertEqual([(e['url'] == URL, e['type']) for e in events],
+                         [(True, 'begin'), (True, 'done'), (True, 'end'),
+                          (False, 'begin'), (False, 'error'), (False, 'end')])
+        self.assertTrue(events[2]['ok'])
+        self.assertFalse(events[5]['ok'])
+        self.assertIn('supprimée', events[4]['message'])
 
 
 if __name__ == '__main__':

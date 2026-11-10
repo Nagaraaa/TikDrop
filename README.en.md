@@ -140,7 +140,7 @@ python3 -m venv .venv
 | `distribution/` | README shipped in the ZIP and archive assembly script. |
 | `.github/` | Continuous integration (GitHub Actions) and Dependabot. |
 
-Each video downloads in a subprocess to keep the interface responsive and allow cancellation. The chosen folder is stored in `%APPDATA%\TikDrop\settings.json`; failures, with their technical details, in `tikdrop.log` in the same place (512 KB at most).
+The videos of a batch download one after another in a subprocess, which loads the engine only once, keeps the interface responsive and allows cancellation. The chosen folder is stored in `%APPDATA%\TikDrop\settings.json`; failures, with their technical details, in `tikdrop.log` in the same place (512 KB at most).
 
 **Run tests:**
 

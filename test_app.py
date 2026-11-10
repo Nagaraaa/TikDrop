@@ -14,39 +14,75 @@ except ImportError as exc:  # Python without Tkinter
 URL = 'https://www.tiktok.com/@test/video/123456789'
 
 
-def python(code):
-    return [sys.executable, '-c', code]
+# Fake worker: follows a plan per URL ("ok", "error", "nofile", "crash") and
+# tags "done" with its process id, to check that one process serves the batch.
+FAKE = r"""
+import json, os, sys
+plan = json.loads(sys.argv[1])
+urls = sys.stdin.read().split()
+def emit(url, **event):
+    print(json.dumps(dict(event, url=url)), flush=True)
+for url in urls:
+    action = plan.get(url, 'ok')
+    emit(url, type='begin')
+    if action == 'crash':
+        print('Traceback: boom', file=sys.stderr, flush=True)
+        sys.exit(3)
+    if action == 'ok':
+        emit(url, type='done', path=str(os.getpid()))
+    if action == 'error':
+        emit(url, type='error', message='Vidéo introuvable', detail='ERROR: 404')
+    emit(url, type='end', ok=action != 'error')
+print('[1, 2]')  # stray output is ignored
+"""
+URLS = [f'https://www.tiktok.com/@t/video/{n}' for n in (1, 2, 3)]
 
 
 class WorkerTests(unittest.TestCase):
-    def run_worker(self, code):
-        events = []
-        return app.run_worker(python(code), events.append), events
+    def run_worker(self, plan=None, cmd=None):
+        events = {}
+        cmd = cmd or [sys.executable, '-c', FAKE, json.dumps(plan or {})]
+        left = app.run_worker(cmd, URLS, lambda url, event: events.setdefault(url, []).append(event))
+        return left, events
 
-    def test_success_forwards_events(self):
-        ok, events = self.run_worker('print(%r)' % json.dumps({'type': 'done', 'path': 'x.mp4'}))
-        self.assertTrue(ok)
-        self.assertEqual(events, [{'type': 'done', 'path': 'x.mp4'}])
+    def kinds(self, events, url):
+        return [event['type'] for event in events.get(url, [])]
 
-    def test_reported_error_is_kept_as_is(self):
-        error = {'type': 'error', 'message': 'Vidéo introuvable', 'detail': 'ERROR: 404'}
-        ok, events = self.run_worker('import sys; print(%r); sys.exit(1)' % json.dumps(error))
-        self.assertFalse(ok)
-        self.assertEqual(events, [error])
+    def test_whole_batch_in_one_process(self):
+        left, events = self.run_worker()
+        self.assertEqual(left, [])
+        for url in URLS:
+            self.assertEqual(self.kinds(events, url), ['begin', 'done'])
+        self.assertEqual(len({events[url][1]['path'] for url in URLS}), 1)
 
-    def test_crash_keeps_exit_code_and_output(self):
-        ok, events = self.run_worker('import sys; print("[1, 2]"); sys.stderr.write("Traceback: boom\\n"); sys.exit(3)')
-        self.assertFalse(ok)
-        self.assertEqual(len(events), 1)
-        self.assertEqual(events[0]['type'], 'error')
-        self.assertIn('Code de sortie : 3', events[0]['detail'])
-        self.assertIn('Traceback: boom', events[0]['detail'])
-        self.assertIn('[1, 2]', events[0]['detail'])
+    def test_reported_error_fails_only_that_video(self):
+        left, events = self.run_worker({URLS[1]: 'error'})
+        self.assertEqual(left, [])
+        self.assertEqual(self.kinds(events, URLS[1]), ['begin', 'error', 'failed'])
+        self.assertEqual(events[URLS[1]][1]['detail'], 'ERROR: 404')
+        self.assertEqual(self.kinds(events, URLS[2]), ['begin', 'done'])
 
-    def test_exit_zero_without_file_is_a_failure(self):
-        ok, events = self.run_worker('pass')
-        self.assertFalse(ok)
-        self.assertIn('Code de sortie : 0', events[0]['detail'])
+    def test_success_without_file_is_a_failure(self):
+        left, events = self.run_worker({URLS[0]: 'nofile'})
+        self.assertEqual(self.kinds(events, URLS[0]), ['begin', 'failed'])
+
+    def test_crash_fails_current_video_and_returns_the_rest(self):
+        left, events = self.run_worker({URLS[1]: 'crash'})
+        self.assertEqual(left, [URLS[2]])
+        self.assertEqual(self.kinds(events, URLS[0]), ['begin', 'done'])
+        self.assertEqual(self.kinds(events, URLS[1]), ['begin', 'error', 'failed'])
+        detail = events[URLS[1]][1]['detail']
+        self.assertIn('Code de sortie : 3', detail)
+        self.assertIn('Traceback: boom', detail)
+        self.assertNotIn(URLS[2], events)
+
+    def test_worker_that_cannot_start_fails_every_video(self):
+        cmd = [sys.executable, '-c', 'import sys; sys.stderr.write("ImportError: yt_dlp\\n"); sys.exit(2)']
+        left, events = self.run_worker(cmd=cmd)
+        self.assertEqual(left, [])
+        for url in URLS:
+            self.assertEqual(self.kinds(events, url), ['error', 'failed'])
+            self.assertIn('ImportError: yt_dlp', events[url][0]['detail'])
 
 
 class ReportTests(unittest.TestCase):
