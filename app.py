@@ -85,38 +85,59 @@ def failure_log():
     return logger
 
 
-def run_worker(cmd, emit, on_start=lambda proc: None):
-    """Run one worker process and forward its JSON events to ``emit``.
+def run_worker(cmd, urls, emit, on_start=lambda proc: None):
+    """Download ``urls`` in one worker process, forwarding its events as emit(url, event).
 
-    Returns True when a file was saved. A worker that stops without reporting
-    an error (crash, missing file in the build…) gets one built from its exit
-    code and whatever it printed, so the reason is never lost.
+    Every URL the worker reaches ends with "done" or "failed". Returns the URLs
+    it did not reach because it stopped early, so the caller can start a new
+    one. A worker that stops without explaining (crash, missing file in the
+    build…) is reported with its exit code and last output lines.
     """
-    done = reported = False
-    other = []
     proc = subprocess.Popen(
-        cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         text=True, encoding='utf-8', errors='replace',
         creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     on_start(proc)
+    try:
+        with proc.stdin:
+            proc.stdin.write(''.join(url + '\n' for url in urls))
+    except OSError:
+        pass  # the worker is already gone: reported below with its exit code
+    expected, reached, saved, other = set(urls), [], set(), []
+    current = None
     with proc.stdout:
         for line in proc.stdout:
             try:
                 event = json.loads(line)
             except ValueError:
                 event = None
-            if isinstance(event, dict):
-                done |= event.get('type') == 'done'
-                reported |= event.get('type') == 'error'
-                emit(event)
-            elif line.strip():
-                other.append(line.rstrip())
+            if not (isinstance(event, dict) and event.get('url') in expected):
+                if line.strip():
+                    other.append(line.rstrip())
+                continue
+            url, kind = event.pop('url'), event.get('type')
+            if kind == 'begin':
+                current = url
+                reached.append(url)
+                emit(url, event)
+            elif kind == 'end':
+                current = None
+                if not (event.get('ok') and url in saved):
+                    emit(url, {'type': 'failed'})
+            else:
+                if kind == 'done':
+                    saved.add(url)
+                emit(url, event)
     code = proc.wait()
-    ok = code == 0 and done
-    if not ok and not reported:
-        emit({'type': 'error', 'message': 'Le téléchargement n’a pas abouti.',
-              'detail': '\n'.join([f'Code de sortie : {code}'] + other[-20:])})
-    return ok
+    crash = {'type': 'error', 'message': 'Le téléchargement n’a pas abouti.',
+             'detail': '\n'.join([f'Code de sortie : {code}'] + other[-20:])}
+    left = [url for url in urls if url not in reached]
+    # The video in progress fails; if the worker could not start any video,
+    # starting another one would fail the same way, so the rest fails too.
+    for url in ([current] if current else []) + ([] if reached else left):
+        emit(url, crash)
+        emit(url, {'type': 'failed'})
+    return left if reached else []
 
 
 def fr_number(value, digits=1):
@@ -787,21 +808,23 @@ class App(tk.Tk):
         self.start([url for url, row in self.rows.items() if row.state in ('failed', 'cancelled')])
 
     def run_batch(self, urls, folder):
+        cmd = ([sys.executable] if getattr(sys, 'frozen', False)
+               else [sys.executable, str(Path(__file__).resolve())]) + ['--worker', folder]
+
+        def forward(url, event):
+            if not (event['type'] == 'failed' and self.stop.is_set()):  # cancelled, not failed
+                self.events.put((url, event))
+        left = list(urls)
         try:
-            for index, url in enumerate(urls, 1):
-                if self.stop.is_set():
-                    break
-                self.events.put((url, {'type': 'begin', 'index': index}))
-                cmd = ([sys.executable] if getattr(sys, 'frozen', False)
-                       else [sys.executable, str(Path(__file__).resolve())]) + ['--worker', url, folder]
+            while left and not self.stop.is_set():
                 try:
-                    ok = run_worker(cmd, lambda event, url=url: self.events.put((url, event)), self._started)
-                    if not ok and not self.stop.is_set():
-                        self.events.put((url, {'type': 'failed'}))
+                    left = run_worker(cmd, left, forward, self._started)
                 except OSError as exc:
-                    self.events.put((url, {'type': 'error', 'message': 'Impossible de lancer le téléchargement.',
-                                           'detail': repr(exc)}))
-                    self.events.put((url, {'type': 'failed'}))
+                    for url in left:
+                        forward(url, {'type': 'error', 'message': 'Impossible de lancer le téléchargement.',
+                                      'detail': repr(exc)})
+                        forward(url, {'type': 'failed'})
+                    left = []
                 finally:
                     self.proc = None
         finally:
@@ -860,7 +883,7 @@ class App(tk.Tk):
         if kind == 'begin':
             row.begin()
             self._reveal(row)
-            self.current = event['index']
+            self.current += 1
             self._status(f'Vidéo {self.current} sur {self.total}', 'Connexion à TikTok…')
             self._overall()
         elif kind == 'meta':
@@ -947,7 +970,7 @@ def enable_dpi_awareness():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) == 4 and sys.argv[1] == '--worker':
-        raise SystemExit(worker(sys.argv[2], sys.argv[3]))
+    if len(sys.argv) == 3 and sys.argv[1] == '--worker':
+        raise SystemExit(worker(sys.argv[2]))
     enable_dpi_awareness()
     App().mainloop()

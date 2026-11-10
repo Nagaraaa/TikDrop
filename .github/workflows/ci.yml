@@ -48,16 +48,20 @@ jobs:
           python -m venv .venv || exit /b 1
           call Construire.cmd
       - name: Smoke test of the executable
-        # The windowed exe must start, load yt-dlp and curl_cffi, and report
-        # through its worker event stream (the video id does not exist).
+        # The windowed exe must start, read the batch on stdin, load yt-dlp and
+        # curl_cffi, and report every video on stdout (these ids do not exist).
         shell: pwsh
         timeout-minutes: 5
         run: |
-          Start-Process dist\TikDrop\TikDrop.exe -Wait -NoNewWindow -RedirectStandardOutput smoke.txt `
-            -ArgumentList '--worker', 'https://www.tiktok.com/@tikdrop/video/1', "$env:RUNNER_TEMP"
+          Set-Content urls.txt 'https://www.tiktok.com/@tikdrop/video/1', 'https://www.tiktok.com/@tikdrop/video/2'
+          Start-Process dist\TikDrop\TikDrop.exe -Wait -NoNewWindow `
+            -RedirectStandardInput urls.txt -RedirectStandardOutput smoke.txt `
+            -ArgumentList '--worker', "$env:RUNNER_TEMP"
           Get-Content smoke.txt
           $events = Get-Content smoke.txt | ForEach-Object { $_ | ConvertFrom-Json }
-          if (-not ($events | Where-Object type -eq 'error')) { throw 'No event received from the worker' }
+          $ended = @($events | Where-Object type -eq 'end').Count
+          if ($ended -ne 2) { throw "Expected 2 finished videos from one worker, got $ended" }
+          if (-not ($events | Where-Object type -eq 'error')) { throw 'No error reported for the missing videos' }
           if (Select-String -Path smoke.txt -Pattern 'no impersonate target' -Quiet) { throw 'curl_cffi is missing from the build' }
       - name: Sources archive
         run: git archive --format=zip --prefix=source/ -o dist/TikDrop-Sources.zip HEAD

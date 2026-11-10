@@ -137,31 +137,43 @@ def download(url, destination, emit, factory=None):
               'existing': not state['downloaded']})
 
 
-def _event_stream():
-    """Stdout for events, even in a windowed (no console) frozen build."""
-    if sys.stdout is not None:
-        return sys.stdout
+def _std_stream(name, mode):
+    """sys.stdin/stdout, even in a windowed (no console) frozen build where they are None."""
+    stream = getattr(sys, name)
+    if stream is not None:
+        return stream
     if sys.platform == 'win32':
         import ctypes
         import msvcrt
-        handle = ctypes.windll.kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+        handle = ctypes.windll.kernel32.GetStdHandle({'stdin': -10, 'stdout': -11}[name])
         if handle not in (0, -1, None):
-            fd = msvcrt.open_osfhandle(handle, os.O_WRONLY)
-            return open(fd, 'w', encoding='ascii', buffering=1)
-    return open(os.devnull, 'w')
+            fd = msvcrt.open_osfhandle(handle, os.O_RDONLY if mode == 'r' else os.O_WRONLY)
+            return open(fd, mode, encoding='utf-8', buffering=1)
+    return open(os.devnull, mode)
 
 
-def worker(url, destination):
-    out = _event_stream()
+def worker(destination):
+    """Download every URL read from stdin, one after the other, in this process.
+
+    Each event is a JSON line tagged with its URL; every video starts with
+    "begin" and finishes with "end" (ok true/false).
+    """
+    urls = _std_stream('stdin', 'r').read().split()  # read all first: the parent never blocks writing
+    out = _std_stream('stdout', 'w')
     sys.stdout = out
     if sys.stderr is None:
         sys.stderr = open(os.devnull, 'w')
-
-    def emit(event):
-        print(json.dumps(event, ensure_ascii=True), file=out, flush=True)
-    try:
-        download(url, destination, emit)
-        return 0
-    except Exception as exc:
-        emit({'type': 'error', 'message': friendly_error(exc), 'detail': str(exc)[:600]})
-        return 1
+    failures = 0
+    for url in urls:
+        def emit(event, url=url):
+            print(json.dumps(dict(event, url=url), ensure_ascii=True), file=out, flush=True)
+        emit({'type': 'begin'})
+        try:
+            download(url, destination, emit)
+            ok = True
+        except Exception as exc:
+            emit({'type': 'error', 'message': friendly_error(exc), 'detail': str(exc)[:600]})
+            ok = False
+        failures += not ok
+        emit({'type': 'end', 'ok': ok})
+    return 1 if failures else 0

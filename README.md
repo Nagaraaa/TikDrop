@@ -138,7 +138,7 @@ python3 -m venv .venv
 | `distribution/` | README livré dans le ZIP et script d’assemblage de l’archive. |
 | `.github/` | Intégration continue (GitHub Actions) et Dependabot. |
 
-Chaque vidéo est téléchargée dans un sous-processus pour garder l’interface réactive et permettre l’annulation. Le dossier choisi est enregistré dans `%APPDATA%\TikDrop\settings.json` ; les échecs, avec leur détail technique, dans `tikdrop.log` au même endroit (512 Ko au plus).
+Les vidéos d’un lot sont téléchargées à la suite dans un sous-processus, qui ne charge le moteur qu’une fois, garde l’interface réactive et permet l’annulation. Le dossier choisi est enregistré dans `%APPDATA%\TikDrop\settings.json` ; les échecs, avec leur détail technique, dans `tikdrop.log` au même endroit (512 Ko au plus).
 
 **Lancer les tests :**
 
