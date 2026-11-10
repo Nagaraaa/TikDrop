@@ -160,7 +160,7 @@ To distribute the update, update the versions in `requirements.txt` and rebuild 
 
 **Continuous integration:** on every pull request and on `main`, GitHub Actions runs the tests (Python 3.12 and 3.14), builds the executable with `Construire.cmd`, checks that it starts and loads the engine, then provides `TikDrop-Windows.zip` as an artifact. Dependabot opens a daily pull request for new yt-dlp and curl-cffi versions.
 
-**Publish a release:** update `VERSION` in `app.py` (and the versions in `THIRD_PARTY.md` and `VERIFICATION.md`), then push a matching `vX.Y.Z` tag. A draft release is created with `TikDrop-Windows.zip` and `TikDrop-Sources.zip`: complete the notes, then publish it.
+**Publish a release:** update `VERSION` in `app.py` (and the versions in `THIRD_PARTY.md` and `VERIFICATION.md`), then on GitHub open **Actions → CI → Run workflow**, tick the release box and run it on `main` (or push a matching `vX.Y.Z` tag). The tag and a draft release are created with `TikDrop-Windows.zip` and `TikDrop-Sources.zip`: complete the notes, then publish it.
 
 ## Scope and limitations
 
