@@ -86,6 +86,15 @@ class CoreTests(unittest.TestCase):
                                                            '<urlopen error [Errno 11001] getaddrinfo failed>'))
         self.assertIn('mise à jour', friendly_error('ERROR: [TikTok] 1: Unable to extract universal data'))
 
+    def test_curl_network_errors(self):
+        for reason in ('curl: (6) Could not resolve host: www.tiktok.com',
+                       'curl: (7) Failed to connect to www.tiktok.com port 443 after 0 ms: Could not connect to server',
+                       'curl: (7) CONNECT tunnel failed, response 403'):
+            with self.subTest(reason=reason):
+                self.assertIn('connexion Internet', friendly_error(
+                    f'ERROR: [TikTok] 1: Unable to download webpage: Failed to perform, {reason}. '
+                    'See https://curl.se/libcurl/c/libcurl-errors.html first for more details.'))
+
     @unittest.skipUnless(importlib.util.find_spec('yt_dlp'), 'yt-dlp non installé')
     def test_prefers_h264_without_watermark(self):
         from yt_dlp import YoutubeDL

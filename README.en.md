@@ -94,7 +94,7 @@ These addresses illustrate supported formats: use your video's actual link. Shar
 | There is a `.part` file | The download was interrupted. Retry with the same folder to attempt a resume. |
 | An existing video is not replaced | This is intentional: existing files are not overwritten. |
 
-Still having trouble? [Open an issue](https://github.com/Nagaraaa/TikDrop/issues) with your Windows version, TikDrop version and the error message. Do not post passwords, cookies or private information.
+Still having trouble? Click **Copier l’erreur** (copy error) next to the failed video, then [open an issue](https://github.com/Nagaraaa/TikDrop/issues) and paste the text: it contains the TikDrop, yt-dlp and Windows versions, the link and the technical details. Failures are also logged in `%APPDATA%\TikDrop\tikdrop.log`. Do not post passwords, cookies or private information.
 
 ## Run from source
 
@@ -140,7 +140,7 @@ python3 -m venv .venv
 | `distribution/` | README shipped in the ZIP and archive assembly script. |
 | `.github/` | Continuous integration (GitHub Actions) and Dependabot. |
 
-Each video downloads in a subprocess to keep the interface responsive and allow cancellation. The chosen folder is stored in `%APPDATA%\TikDrop\settings.json`.
+Each video downloads in a subprocess to keep the interface responsive and allow cancellation. The chosen folder is stored in `%APPDATA%\TikDrop\settings.json`; failures, with their technical details, in `tikdrop.log` in the same place (512 KB at most).
 
 **Run tests:**
 

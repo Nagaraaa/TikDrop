@@ -1,7 +1,12 @@
 """French desktop interface for TikDrop (MIT)."""
+import functools
+from importlib import metadata
 import json
+import logging
+import logging.handlers
 import os
 from pathlib import Path
+import platform
 import queue
 import subprocess
 import sys
@@ -44,6 +49,74 @@ def save_settings(data):
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
     except OSError:
         pass
+
+
+@functools.lru_cache(maxsize=None)
+def engine_version():
+    try:
+        return metadata.version('yt-dlp')
+    except metadata.PackageNotFoundError:
+        return 'inconnue'
+
+
+def error_report(url, message, detail=''):
+    """Plain-text summary of a failure, ready to paste into a bug report."""
+    lines = [f'TikDrop {VERSION} · yt-dlp {engine_version()} · {platform.platform()}',
+             f'Lien : {url}', f'Erreur : {message}']
+    if detail and detail.strip() != message:
+        lines.append('Détail : ' + detail.strip())
+    return '\n'.join(lines)
+
+
+@functools.lru_cache(maxsize=None)
+def failure_log():
+    """Logger writing failures to tikdrop.log next to settings.json (2 × 256 Ko max)."""
+    logger = logging.getLogger('tikdrop')
+    logger.propagate = False
+    try:
+        path = settings_path().with_name('tikdrop.log')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        handler = logging.handlers.RotatingFileHandler(path, maxBytes=256_000, backupCount=1, encoding='utf-8')
+        handler.setFormatter(logging.Formatter('--- %(asctime)s\n%(message)s'))
+    except OSError:
+        handler = logging.NullHandler()
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    return logger
+
+
+def run_worker(cmd, emit, on_start=lambda proc: None):
+    """Run one worker process and forward its JSON events to ``emit``.
+
+    Returns True when a file was saved. A worker that stops without reporting
+    an error (crash, missing file in the build…) gets one built from its exit
+    code and whatever it printed, so the reason is never lost.
+    """
+    done = reported = False
+    other = []
+    proc = subprocess.Popen(
+        cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, encoding='utf-8', errors='replace',
+        creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    on_start(proc)
+    with proc.stdout:
+        for line in proc.stdout:
+            try:
+                event = json.loads(line)
+            except ValueError:
+                event = None
+            if isinstance(event, dict):
+                done |= event.get('type') == 'done'
+                reported |= event.get('type') == 'error'
+                emit(event)
+            elif line.strip():
+                other.append(line.rstrip())
+    code = proc.wait()
+    ok = code == 0 and done
+    if not ok and not reported:
+        emit({'type': 'error', 'message': 'Le téléchargement n’a pas abouti.',
+              'detail': '\n'.join([f'Code de sortie : {code}'] + other[-20:])})
+    return ok
 
 
 def fr_number(value, digits=1):
@@ -209,7 +282,7 @@ class Row(tk.Frame):
     def __init__(self, master, app, url):
         super().__init__(master, bg=C['surface'])
         self.app, self.url = app, url
-        self.state, self.path, self.error = 'waiting', None, ''
+        self.state, self.path, self.error, self.detail = 'waiting', None, '', ''
         px = app.px
         self.columnconfigure(1, weight=1)
         self.dot = tk.Canvas(self, width=px(10), height=px(10), bg=C['surface'], highlightthickness=0)
@@ -224,6 +297,7 @@ class Row(tk.Frame):
                               bg=C['surface'], anchor='e')
         self.badge.grid(row=0, column=2, sticky='e', padx=(px(12), px(18)), pady=(px(10), 0))
         self.action = Button(self, app, 'Afficher', self.reveal, kind='ghost', small=True)
+        self.copy_btn = Button(self, app, 'Copier l’erreur', self.copy_error, kind='ghost', small=True)
         self.bar = ProgressLine(self, app, height=3)
         self.bar.grid(row=2, column=1, columnspan=2, sticky='ew', padx=(0, px(18)), pady=(px(8), 0))
         self.bar.grid_remove()
@@ -274,6 +348,12 @@ class Row(tk.Frame):
         self._dot(C['bad'])
         self._badge('Échec', C['bad'])
         self.sub.configure(text=message, fg=C['bad'])
+        self.copy_btn.grid(row=1, column=2, sticky='e', padx=(self.app.px(12), self.app.px(12)))
+        failure_log().info(error_report(self.url, message, self.detail))
+
+    def copy_error(self):
+        self.app.copy_text(error_report(self.url, self.error, self.detail))
+        self.app._status('Erreur copiée', 'Colle-la dans ton signalement sur GitHub.')
 
     def cancel(self):
         if self.state in ('waiting', 'active'):
@@ -623,6 +703,11 @@ class App(tk.Tk):
         else:
             self.banner.grid_remove()
 
+    def copy_text(self, text):
+        self.clipboard_clear()
+        self.clipboard_append(text)
+        self.clip_seen = self.clip_text = text  # our own copy is not a new link to offer
+
     def clip_add(self):
         self._insert('\n'.join(self.clip_links))
         self.clip_dismiss()
@@ -709,32 +794,23 @@ class App(tk.Tk):
                 self.events.put((url, {'type': 'begin', 'index': index}))
                 cmd = ([sys.executable] if getattr(sys, 'frozen', False)
                        else [sys.executable, str(Path(__file__).resolve())]) + ['--worker', url, folder]
-                done = False
                 try:
-                    self.proc = subprocess.Popen(
-                        cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                        text=True, encoding='utf-8', errors='replace',
-                        creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-                    if self.stop.is_set():
-                        self.proc.terminate()
-                    for line in self.proc.stdout:
-                        try:
-                            event = json.loads(line)
-                        except ValueError:
-                            continue
-                        if isinstance(event, dict):
-                            done |= event.get('type') == 'done'
-                            self.events.put((url, event))
-                    code = self.proc.wait()
-                    if not self.stop.is_set() and not (code == 0 and done):
+                    ok = run_worker(cmd, lambda event, url=url: self.events.put((url, event)), self._started)
+                    if not ok and not self.stop.is_set():
                         self.events.put((url, {'type': 'failed'}))
                 except OSError as exc:
-                    self.events.put((url, {'type': 'error', 'message': str(exc)}))
+                    self.events.put((url, {'type': 'error', 'message': 'Impossible de lancer le téléchargement.',
+                                           'detail': repr(exc)}))
                     self.events.put((url, {'type': 'failed'}))
                 finally:
                     self.proc = None
         finally:
             self.events.put(('', {'type': 'batch_done', 'cancelled': self.stop.is_set()}))
+
+    def _started(self, proc):
+        self.proc = proc
+        if self.stop.is_set():
+            proc.terminate()
 
     def cancel(self):
         if not self.busy:
@@ -806,6 +882,7 @@ class App(tk.Tk):
             self._overall()
         elif kind == 'error':
             row.error = event.get('message') or ''
+            row.detail = event.get('detail') or ''
         elif kind == 'failed':
             row.fail(row.error or 'Le téléchargement n’a pas abouti.')
             self._overall()
