@@ -56,7 +56,7 @@ jobs:
           if (Select-String -Path smoke.txt -Pattern 'no impersonate target' -Quiet) { throw 'curl_cffi is missing from the build' }
       - name: Sources archive
         run: git archive --format=zip --prefix=source/ -o dist/TikDrop-Sources.zip HEAD
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: TikDrop-Windows
           path: |
