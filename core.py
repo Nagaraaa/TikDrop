@@ -12,7 +12,7 @@ _ANSI = re.compile(r'\x1b\[[0-9;]*m')
 
 def _clean_link(raw):
     """Return the canonical video URL for ``raw``, or None if it is not one."""
-    raw = raw.rstrip('.,;!?)。')
+    raw = raw.rstrip('.,;:!?)]}\'"。')
     try:
         parts = urlsplit(raw)
         port = parts.port

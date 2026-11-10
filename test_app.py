@@ -76,5 +76,51 @@ class ReportTests(unittest.TestCase):
         self.assertIn('Détail : détail Y', text)
 
 
+class InterfaceTests(unittest.TestCase):
+    """Behaviour of the real window (skipped without a display)."""
+
+    def setUp(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        patcher = mock.patch.dict(os.environ, {'APPDATA': folder.name})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        try:
+            self.app = app.App()
+        except app.tk.TclError as exc:
+            self.skipTest(f'pas d’écran : {exc}')
+        self.addCleanup(self.app.destroy)
+        self.app.withdraw()
+
+    def text(self):
+        return self.app.links.get('1.0', 'end').strip()
+
+    def test_banner_hides_once_the_link_is_in_the_box(self):
+        self.app.clipboard_clear()
+        self.app.clipboard_append(f'Regarde {URL}')
+        self.app.check_clipboard()
+        self.assertEqual(self.app.clip_links, [URL])
+        self.app._insert(URL)  # pasted by hand instead of clicking "Ajouter"
+        self.assertEqual(self.app.clip_links, [])
+        self.assertFalse(self.app.banner.winfo_manager())
+
+    def test_saved_links_leave_the_box(self):
+        other = 'https://vm.tiktok.com/ABC12'
+        self.app._insert(f'{URL}\nhttps://example.com/x\n{other}')
+        saved, failed = (app.Row(self.app.list_inner, self.app, u) for u in (URL, other))
+        saved.state, failed.state = 'existing', 'failed'
+        self.app.rows = {URL: saved, other: failed}
+        self.app._drop_saved_links()
+        self.assertEqual(self.text(), other)
+        self.assertEqual(self.app.pending, [other])
+
+    def test_unknown_size_shows_a_label_not_zero_percent(self):
+        row = app.Row(self.app.list_inner, self.app, URL)
+        row.progress({'percent': 0, 'total': 0})
+        self.assertEqual(row.badge.cget('text'), 'Téléchargement…')
+        row.progress({'percent': 42.4, 'total': 100})
+        self.assertEqual(row.badge.cget('text'), '42 %')
+
+
 if __name__ == '__main__':
     unittest.main()

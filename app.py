@@ -326,6 +326,9 @@ class Row(tk.Frame):
             self.sub.configure(text=shorten(event['title'], 140))
 
     def progress(self, event):
+        if not event.get('total'):  # size unknown: no meaningful percentage
+            self._badge('Téléchargement…', C['accent'])
+            return
         self.bar.set(event['percent'] / 100)
         self._badge(f"{event['percent']:.0f} %", C['accent'])
 
@@ -661,6 +664,18 @@ class App(tk.Tk):
         self.start_btn.set_text(f'Télécharger · {len(links)}' if len(links) > 1 else 'Télécharger')
         self.start_btn.set_enabled(bool(links) and not self.busy)
         self._placeholder()
+        self._sync_banner()
+
+    def _sync_banner(self):
+        """Offer only clipboard links that are not already in the box."""
+        known = set(self.pending)
+        self.clip_links = [link for link in self.clip_links if link not in known]
+        if self.clip_links and not self.busy:
+            n = len(self.clip_links)
+            self.banner_text.configure(text=f"{plural(n, 'lien')} TikTok dans le presse-papiers")
+            self.banner.grid(row=1, column=0, sticky='ew')
+        else:
+            self.banner.grid_remove()
 
     # ---- actions
     def paste(self):
@@ -692,16 +707,9 @@ class App(tk.Tk):
             return
         if clip == self.clip_seen:
             return
-        links, _ = scan_links(clip)
-        known = set(self.pending)
-        self.clip_links = [link for link in links if link not in known]
+        self.clip_links, _ = scan_links(clip)
         self.clip_text = clip
-        if self.clip_links:
-            n = len(self.clip_links)
-            self.banner_text.configure(text=f"{plural(n, 'lien')} TikTok dans le presse-papiers")
-            self.banner.grid(row=1, column=0, sticky='ew')
-        else:
-            self.banner.grid_remove()
+        self._sync_banner()
 
     def copy_text(self, text):
         self.clipboard_clear()
@@ -714,6 +722,7 @@ class App(tk.Tk):
 
     def clip_dismiss(self):
         self.clip_seen = getattr(self, 'clip_text', '')
+        self.clip_links = []
         self.banner.grid_remove()
 
     def browse(self):
@@ -891,6 +900,7 @@ class App(tk.Tk):
         for row in self.rows.values():
             row.cancel()
         self.set_busy(False)
+        self._drop_saved_links()
         c = self._counts()
         parts = []
         if c.get('done'):
@@ -917,6 +927,16 @@ class App(tk.Tk):
             self.retry_btn.set_text(f'Réessayer · {retry}')
             self.retry_btn.pack(side='right', padx=(0, self.px(8)), after=self.start_btn)
         self._notify()
+
+    def _drop_saved_links(self):
+        """Remove saved videos from the links box, so a new click only fetches what is left."""
+        saved = {url for url, row in self.rows.items() if row.state in ('done', 'existing')}
+        if not saved:
+            return
+        links, _ = scan_links(self.links.get('1.0', 'end'))
+        self.links.delete('1.0', 'end')
+        self.links.insert('1.0', '\n'.join(link for link in links if link not in saved))
+        self.refresh_links()
 
     def _notify(self):
         if self.focus_displayof() is not None:
