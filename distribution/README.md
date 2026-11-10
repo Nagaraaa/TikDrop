@@ -68,7 +68,9 @@ Vidéos publiques individuelles uniquement; pas de profils complets, directs,
 diaporamas photo, contenu privé ou contournement d’une connexion obligatoire.
 TikTok peut refuser une requête selon le réseau, la région ou ses protections;
 un lien valide ne garantit donc pas le téléchargement. Les erreurs courantes
-sont expliquées en français dans l’interface.
+sont expliquées en français dans l’interface. Pour signaler un problème, cliquer
+sur **Copier l’erreur** à côté de la vidéo et coller le texte dans une issue ;
+les échecs sont aussi notés dans `%APPDATA%\TikDrop\tikdrop.log`.
 
 Le moteur sélectionne un fichier audio/vidéo combiné, de préférence MP4, pour
 éviter une installation FFmpeg. Il ne garantit ni la résolution maximale parmi

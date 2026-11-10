@@ -92,7 +92,7 @@ Ces adresses illustrent les formats acceptés : utilise le vrai lien de ta vidé
 | Un fichier `.part` est présent | Le téléchargement a été interrompu. Réessaie avec le même dossier pour tenter une reprise. |
 | Une vidéo existante n’est pas remplacée | C’est prévu : les fichiers déjà présents ne sont pas écrasés. |
 
-Un souci persiste ? [Ouvre une issue](https://github.com/Nagaraaa/TikDrop/issues) avec ta version de Windows, la version de TikDrop et le message d’erreur. Ne publie pas de mot de passe, cookie ou donnée privée.
+Un souci persiste ? Clique sur **Copier l’erreur** à côté de la vidéo en échec, puis [ouvre une issue](https://github.com/Nagaraaa/TikDrop/issues) et colle le texte : il contient les versions de TikDrop, de yt-dlp et de Windows, le lien et le détail technique. Les échecs sont aussi notés dans `%APPDATA%\TikDrop\tikdrop.log`. Ne publie pas de mot de passe, cookie ou donnée privée.
 
 ## Lancer depuis les sources
 
@@ -138,7 +138,7 @@ python3 -m venv .venv
 | `distribution/` | README livré dans le ZIP et script d’assemblage de l’archive. |
 | `.github/` | Intégration continue (GitHub Actions) et Dependabot. |
 
-Chaque vidéo est téléchargée dans un sous-processus pour garder l’interface réactive et permettre l’annulation. Le dossier choisi est enregistré dans `%APPDATA%\TikDrop\settings.json`.
+Chaque vidéo est téléchargée dans un sous-processus pour garder l’interface réactive et permettre l’annulation. Le dossier choisi est enregistré dans `%APPDATA%\TikDrop\settings.json` ; les échecs, avec leur détail technique, dans `tikdrop.log` au même endroit (512 Ko au plus).
 
 **Lancer les tests :**
 
