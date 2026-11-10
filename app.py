@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import platform
 import queue
+import re
 import subprocess
 import sys
 import threading
@@ -15,6 +16,8 @@ import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import filedialog, messagebox, ttk
 from urllib.parse import urlsplit
+import urllib.request
+import webbrowser
 from core import scan_links, worker
 
 VERSION = '1.2.0'
@@ -138,6 +141,39 @@ def run_worker(cmd, urls, emit, on_start=lambda proc: None):
         emit(url, crash)
         emit(url, {'type': 'failed'})
     return left if reached else []
+
+
+LATEST_RELEASE_API = 'https://api.github.com/repos/Nagaraaa/TikDrop/releases/latest'
+
+
+def parse_version(text):
+    """'v1.10.2' -> (1, 10, 2); None for anything else."""
+    match = re.fullmatch(r'v?(\d+)\.(\d+)\.(\d+)', str(text).strip())
+    return tuple(int(part) for part in match.groups()) if match else None
+
+
+def _fetch_latest_release():
+    request = urllib.request.Request(LATEST_RELEASE_API, headers={
+        'User-Agent': f'TikDrop/{VERSION}', 'Accept': 'application/vnd.github+json'})
+    with urllib.request.urlopen(request, timeout=8) as response:
+        return json.load(response)
+
+
+def newer_release(fetch=_fetch_latest_release):
+    """(version, page URL) of the latest published release if newer than this one, else None.
+
+    Only the public GitHub API is contacted, without any identifier; any
+    failure (offline, rate limit, unexpected answer) simply returns None.
+    """
+    try:
+        release = fetch()
+        latest = parse_version(release['tag_name'])
+        url = release['html_url']
+    except Exception:
+        return None
+    if latest and latest > parse_version(VERSION) and str(url).startswith('https://github.com/'):
+        return '.'.join(map(str, latest)), url
+    return None
 
 
 def fr_number(value, digits=1):
@@ -426,6 +462,9 @@ class App(tk.Tk):
         self.bind('<Configure>', self._on_resize)
         self.after(100, self.poll)
         self.after(400, self.check_clipboard)
+        if self.settings.get('check_updates', True):
+            threading.Thread(target=lambda: self.events.put(('', {'type': 'update', 'release': newer_release()})),
+                             daemon=True).start()
 
     # ---- setup
     def px(self, n):
@@ -506,7 +545,8 @@ class App(tk.Tk):
         tk.Label(titles, text='TikDrop', font=self.f_title, fg=C['text'], bg=C['bg']).pack(anchor='w')
         tk.Label(titles, text='Tes vidéos TikTok, sur ton ordinateur.', font=self.f_body,
                  fg=C['muted'], bg=C['bg']).pack(anchor='w')
-        tk.Label(head, text='v' + VERSION, font=self.f_small, fg=C['faint'], bg=C['bg']).pack(side='right', anchor='n')
+        self.version_lbl = tk.Label(head, text='v' + VERSION, font=self.f_small, fg=C['faint'], bg=C['bg'])
+        self.version_lbl.pack(side='right', anchor='n')
 
         # links card
         card = self._card(body)
@@ -887,6 +927,8 @@ class App(tk.Tk):
         kind = event.get('type')
         if kind == 'batch_done':
             return self._finish(event['cancelled'])
+        if kind == 'update':
+            return self._offer_update(event['release'])
         if row is None:
             return
         if kind == 'begin':
@@ -960,6 +1002,15 @@ class App(tk.Tk):
         self.links.delete('1.0', 'end')
         self.links.insert('1.0', '\n'.join(link for link in links if link not in saved))
         self.refresh_links()
+
+    def _offer_update(self, release):
+        """Turn the version label into a link to the newer release."""
+        if not release:
+            return
+        version, url = release
+        self.version_lbl.configure(text=f'Nouvelle version {version} →', fg=C['accent'],
+                                   font=self.f_small_bold, cursor='hand2')
+        self.version_lbl.bind('<Button-1>', lambda e: webbrowser.open(url))
 
     def _notify(self):
         if self.focus_displayof() is not None:
