@@ -137,7 +137,7 @@ python3 -m venv .venv
 | `assets/tikdrop.ico` | Windows executable icon. |
 | `test_core.py` | Engine tests using simulated data. |
 | `Construire.cmd` | Windows build using PyInstaller. |
-| `distribution/` | README shipped in the ZIP and archive assembly script. |
+| `distribution/` | README shipped in the ZIP, archive assembly script and release notes (`notes/`). |
 | `.github/` | Continuous integration (GitHub Actions) and Dependabot. |
 
 The videos of a batch download one after another in a subprocess, which loads the engine only once, keeps the interface responsive and allows cancellation. The chosen folder is stored in `%APPDATA%\TikDrop\settings.json`; failures, with their technical details, in `tikdrop.log` in the same place (512 KB at most).
@@ -160,7 +160,7 @@ To distribute the update, update the versions in `requirements.txt` and rebuild 
 
 **Continuous integration:** on every pull request and on `main`, GitHub Actions runs the tests (Python 3.12 and 3.14), builds the executable with `Construire.cmd`, checks that it starts and loads the engine, then provides `TikDrop-Windows.zip` as an artifact. Dependabot opens a daily pull request for new yt-dlp and curl-cffi versions.
 
-**Publish a release:** update `VERSION` in `app.py` (and the versions in `THIRD_PARTY.md` and `VERIFICATION.md`), then on GitHub open **Actions → CI → Run workflow**, tick the release box and run it on `main` (or push a matching `vX.Y.Z` tag). The tag and a draft release are created with `TikDrop-Windows.zip` and `TikDrop-Sources.zip`: complete the notes, then publish it.
+**Publish a release:** update `VERSION` in `app.py` (and the versions in `THIRD_PARTY.md` and `VERIFICATION.md`), write the notes in `distribution/notes/vX.Y.Z.md`, then on GitHub open **Actions → CI → Run workflow**, choose `publish` (or `draft`) and run it on `main`. The tag and release are created with those notes, `TikDrop-Windows.zip` and `TikDrop-Sources.zip`. Pushing a `vX.Y.Z` tag also creates a draft.
 
 ## Scope and limitations
 

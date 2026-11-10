@@ -1,5 +1,28 @@
 # Vérification
 
+## Version 1.3.0 — 10 novembre 2026
+
+Même environnement de construction que la 1.2.0 (GitHub Actions, Windows Server
+2025, Python 3.12.10, yt-dlp 2026.10.26, curl-cffi 0.17.0, PyInstaller 6.22.3).
+
+- 30 tests réussis sous Windows avec Python 3.12 et 3.14, dont les tests
+  d’interface avec une vraie fenêtre Tk : lot complet dans un seul processus,
+  erreur signalée, succès sans fichier, plantage au milieu d’un lot (vidéo en
+  cours en échec, suite reprise), worker incapable de démarrer ; bandeau du
+  presse-papiers, liens enregistrés retirés, badge « Téléchargement… » ;
+  comparaison des versions et lien « Nouvelle version ».
+- Exécutable fenêtré lancé par la CI avec deux liens sur son entrée standard :
+  un seul processus les traite tous les deux et renvoie « begin », l’erreur
+  traduite et « end » pour chacun.
+- Interface pilotée par script sous Linux (Python 3.12, Tk 8.6, Xvfb) : lot de
+  3 liens avec le vrai moteur, un seul worker lancé ; annulation au milieu d’un
+  lot (1 enregistrée, 2 annulées, « Réessayer · 2 ») ; vraie API GitHub en se
+  faisant passer pour la 1.1.0 : « Nouvelle version 1.2.0 → » affiché, rien avec
+  `check_updates: false`.
+
+Non vérifié : téléchargement réel réussi (TikTok inaccessible depuis les
+environnements de test), gain de temps mesuré sur un vrai lot, rendu sous Windows.
+
 ## Version 1.2.0 — 10 novembre 2026
 
 Exécutable construit par GitHub Actions (`windows-latest`, Windows Server 2025
