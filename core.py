@@ -60,7 +60,9 @@ _FRIENDLY = (
     (('log in', 'login', 'private', 'comfortable for some audiences'), 'Cette vidéo n’est pas publique ou demande une connexion.'),
     (('http error 404', 'not available', 'unavailable', 'removed', 'does not exist'), 'Vidéo introuvable : elle a peut-être été supprimée.'),
     (('http error 403',), 'TikTok refuse l’accès à cette vidéo (erreur 403).'),
-    (('timed out', 'getaddrinfo', 'network is unreachable', 'connection', 'name resolution'), 'Problème de connexion Internet.'),
+    (('timed out', 'getaddrinfo', 'network is unreachable', 'connection', 'name resolution',
+      # curl_cffi (used by the Windows build): resolve proxy/host, connect, timeout, receive
+      'curl: (5)', 'curl: (6)', 'curl: (7)', 'curl: (28)', 'curl: (56)'), 'Problème de connexion Internet.'),
     (('unable to extract', 'unsupported url', 'unable to download webpage'), 'Impossible de lire la page TikTok. Une mise à jour de TikDrop peut être nécessaire.'),
     (('errno 28', 'no space left'), 'Plus assez d’espace disque.'),
     (('errno 13', 'permission denied'), 'Impossible d’écrire dans ce dossier.'),
