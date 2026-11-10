@@ -17,7 +17,7 @@ from tkinter import filedialog, messagebox, ttk
 from urllib.parse import urlsplit
 from core import scan_links, worker
 
-VERSION = '1.1.0'
+VERSION = '1.2.0'
 C = {
     'bg': '#0c0f16', 'surface': '#141923', 'raised': '#1b2130', 'line': '#262e3f',
     'hover': '#252d3f', 'text': '#eef2fa', 'muted': '#8f9ab0', 'faint': '#5e687c',
