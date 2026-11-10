@@ -1,25 +1,32 @@
-# Vérification — 9 novembre 2026
+# Vérification
 
-Environnement : Windows 11 x64, Python 3.12.10, yt-dlp 2026.10.26,
-curl-cffi 0.17.0, PyInstaller 6.22.3.
+## Version 1.1.0 — 10 novembre 2026
 
-- 5 tests unitaires réussis (`python -m unittest -v`) : liens courts,
-  texte de partage/doublons, rejet de domaines trompeurs et profils,
-  progression/résultat avec un moteur simulé, refus d’un faux succès sans fichier.
-- Test Tk réel par script réussi : rendu, états des boutons, drapeau
-  d’annulation, traitement d’événements simulés de progression et fin.
-- Fenêtre de l’exécutable Windows réellement ouverte et inspectée visuellement.
-  Correction de la hauteur et du contraste du dossier après inspection.
-- Construction Windows terminée avec succès.
-- Essai réseau réel avec les sources ET avec l’exécutable sur :
-  `https://www.tiktok.com/@patroxofficial/video/6748451240264420610`
-  Résultat : code de sortie 1 et erreur structurée :
-  `Your IP address is blocked from accessing this post`.
+Environnement : Windows 11 x64, yt-dlp 2026.10.26, curl-cffi 0.17.0,
+PyInstaller 6.22.3. Développement sous Python 3.14.7 (Tk 9.0) ; exécutable de la
+release construit et retesté sous Python 3.12.10 (Tk 8.6).
 
-**Retour utilisateur : fonctionnement confirmé le 9 novembre 2026.**
-Ce retour constitue une validation utilisateur; aucun téléchargement TikTok réussi
-n’a été observé directement par l’agent depuis son réseau de test.
-Les tests simulés ne prouvent pas l’accès aux vidéos de TikTok. L’annulation
-pendant un téléchargement réseau réussi et l’utilisation sur un autre PC
-restent à vérifier. La distribution est une première version à essayer,
-pas une garantie de compatibilité avec tous les liens.
+- 9 tests unitaires réussis (`python -m unittest -v`) : liens courts, texte de
+  partage et doublons, rejet des domaines trompeurs et profils, liens ignorés sans
+  bloquer les autres, port invalide, progression simulée, fichier déjà présent et
+  métadonnées, refus d’un faux succès sans fichier, messages d’erreur en français.
+- Téléchargements réels depuis les sources : 2 vidéos publiques enregistrées
+  (1,2 Mo et 1,8 Mo), puis un second passage correctement marqué « Déjà présente ».
+  Un identifiant inexistant produit un échec propre avec message en français.
+- Interface pilotée par script : état vide, bandeau presse-papiers, liens ignorés,
+  progression, fin, annulation, bouton Réessayer, défilement automatique, fenêtre
+  réduite à 680 × 560. Captures inspectées visuellement.
+- Exécutable construit en mode fenêtré (`--windowed`) : la fenêtre s’ouvre sans
+  console, avec l’icône TikDrop et la barre de titre sombre. Le sous-processus de
+  téléchargement de l’exécutable renvoie bien ses événements (téléchargement réel,
+  fichier déjà présent, erreur).
+- Mêmes vérifications répétées sous Python 3.12.10 / Tk 8.6 : tests unitaires,
+  parcours complet de l’interface, exécutable fenêtré et téléchargements réels.
+
+Non vérifié : Windows 10, autres réseaux ou régions, écrans à 125–200 %
+d’échelle, annulation au milieu d’un long téléchargement réel.
+
+## Version 1.0.0 — 9 novembre 2026
+
+Windows 11 x64, Python 3.12.10 : 5 tests unitaires réussis, test Tk scripté,
+construction Windows réussie. Fonctionnement confirmé par l’utilisateur.

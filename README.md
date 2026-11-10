@@ -26,10 +26,12 @@ Colle tes liens. Choisis ton dossier. Télécharge tes vidéos.
 
 | Fonction | Ce que tu peux faire |
 | --- | --- |
-| **Simple** | Coller un lien TikTok ou le texte complet d’un partage. |
+| **Simple** | Coller un lien TikTok ou le texte complet d’un partage. Les liens qui ne sont pas des vidéos sont ignorés. |
+| **Presse-papiers** | TikDrop repère un lien TikTok copié et propose de l’ajouter. |
 | **Plusieurs vidéos** | Ajouter plusieurs liens et les télécharger à la suite. |
-| **Ton dossier** | Choisir où enregistrer les vidéos. |
-| **Suivi en direct** | Voir la progression, le débit et le résultat de chaque vidéo. |
+| **Ton dossier** | Choisir où enregistrer les vidéos ; TikDrop s’en souvient. |
+| **Suivi en direct** | Voir l’auteur, le titre, la progression, le débit et le temps restant de chaque vidéo. |
+| **Erreurs claires** | Comprendre en français pourquoi une vidéo échoue, puis réessayer seulement les échecs. |
 | **Reprise** | Relancer un téléchargement partiel sans écraser les fichiers déjà présents. |
 | **Portable** | Utiliser la version Windows sans installer Python ni FFmpeg. |
 
@@ -61,13 +63,13 @@ TikDrop/
 ## Utilisation
 
 1. Sur TikTok, copie le lien d’une vidéo via **Partager → Copier le lien**.
-2. Clique sur **Coller le presse-papiers** ou colle directement le texte dans TikDrop.
+2. Reviens dans TikDrop : clique sur **Ajouter** dans le bandeau vert, sur **Coller**, ou colle directement le texte.
 3. Pour plusieurs vidéos, ajoute un lien par ligne.
-4. Choisis ton dossier avec **Parcourir…**.
-5. Clique sur **Télécharger les vidéos** et attends l’état **Enregistrée ✓**.
-6. Clique sur **Ouvrir** pour retrouver tes fichiers.
+4. Choisis ton dossier avec **Changer…** (il est mémorisé pour la prochaine fois).
+5. Clique sur **Télécharger** (ou Ctrl+Entrée) et attends l’état **Enregistrée ✓**.
+6. Clique sur **Afficher** à côté d’une vidéo, ou sur **Ouvrir**, pour retrouver tes fichiers.
 
-**Annuler** arrête le lot en cours. Un fichier `.part` peut rester dans le dossier : une nouvelle tentative peut le reprendre, ou tu peux le supprimer.
+**Annuler** arrête le lot en cours ; **Réessayer** relance uniquement les vidéos en échec ou annulées. Un fichier `.part` peut rester dans le dossier : une nouvelle tentative peut le reprendre, ou tu peux le supprimer.
 
 ### Liens acceptés
 
@@ -131,9 +133,10 @@ python3 -m venv .venv
 | `app.py` | Interface Tkinter et file de téléchargements. |
 | `core.py` | Validation des liens et intégration de yt-dlp. |
 | `test_core.py` | Tests du moteur avec des données simulées. |
+| `assets/tikdrop.ico` | Icône de l’exécutable Windows. |
 | `Construire.cmd` | Construction Windows avec PyInstaller. |
 
-Chaque vidéo est téléchargée dans un sous-processus pour garder l’interface réactive et permettre l’annulation.
+Chaque vidéo est téléchargée dans un sous-processus pour garder l’interface réactive et permettre l’annulation. Le dossier choisi est enregistré dans `%APPDATA%\TikDrop\settings.json`.
 
 **Lancer les tests :**
 
@@ -160,7 +163,7 @@ Pour distribuer cette mise à jour, actualise les versions dans `requirements.tx
 - Résolution maximale parmi les pistes séparées et absence de filigrane non garanties. TikDrop n’ajoute aucun retrait de filigrane.
 - Interface actuelle en français ; certains messages de yt-dlp sont en anglais.
 
-Le fonctionnement a été confirmé par l’utilisateur. Les essais locaux et leurs limites sont documentés dans [VERIFICATION.md](VERIFICATION.md).
+Les essais (tests automatiques, téléchargements réels, exécutable Windows) et leurs limites sont documentés dans [VERIFICATION.md](VERIFICATION.md).
 
 ## Licence et crédits
 

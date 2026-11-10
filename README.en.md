@@ -26,10 +26,12 @@ Paste your links. Pick a folder. Download your videos.
 
 | Feature | What you can do |
 | --- | --- |
-| **Simple** | Paste a TikTok link or the full text of a shared post. |
+| **Simple** | Paste a TikTok link or the full text of a shared post. Links that are not videos are skipped. |
+| **Clipboard** | TikDrop spots a copied TikTok link and offers to add it. |
 | **Multiple videos** | Add several links and download them one after another. |
-| **Your folder** | Choose where to save your videos. |
-| **Live feedback** | See progress, download speed and the result for each video. |
+| **Your folder** | Choose where to save your videos; TikDrop remembers it. |
+| **Live feedback** | See the creator, title, progress, speed and time left for each video. |
+| **Clear errors** | Understand why a video failed, then retry only the failed ones. |
 | **Resume** | Retry partial downloads without overwriting existing files. |
 | **Portable** | Use the Windows build without installing Python or FFmpeg. |
 
@@ -63,13 +65,13 @@ TikDrop/
 The current interface is in French. These are the steps and labels you will see:
 
 1. On TikTok, copy a video's link using **Share → Copy link**.
-2. Click **Coller le presse-papiers** (Paste clipboard), or paste directly into TikDrop.
+2. Back in TikDrop, click **Ajouter** (Add) in the green banner, click **Coller** (Paste), or paste directly.
 3. To download several videos, add one link per line.
-4. Click **Parcourir…** (Browse) to choose your destination folder.
-5. Click **Télécharger les vidéos** (Download videos), then wait for **Enregistrée ✓** (Saved).
-6. Click **Ouvrir** (Open) to find your files.
+4. Click **Changer…** (Change) to choose your destination folder; it is remembered.
+5. Click **Télécharger** (Download) or press Ctrl+Enter, then wait for **Enregistrée ✓** (Saved).
+6. Click **Afficher** (Show) next to a video, or **Ouvrir** (Open), to find your files.
 
-**Annuler** (Cancel) stops the current batch. A `.part` file may remain in the folder: retrying can resume it, or you can delete it.
+**Annuler** (Cancel) stops the current batch; **Réessayer** (Retry) only reruns failed or cancelled videos. A `.part` file may remain in the folder: retrying can resume it, or you can delete it.
 
 ### Supported links
 
@@ -132,10 +134,11 @@ python3 -m venv .venv
 | --- | --- |
 | `app.py` | Tkinter interface and download queue. |
 | `core.py` | Link validation and yt-dlp integration. |
+| `assets/tikdrop.ico` | Windows executable icon. |
 | `test_core.py` | Engine tests using simulated data. |
 | `Construire.cmd` | Windows build using PyInstaller. |
 
-Each video downloads in a subprocess to keep the interface responsive and allow cancellation.
+Each video downloads in a subprocess to keep the interface responsive and allow cancellation. The chosen folder is stored in `%APPDATA%\TikDrop\settings.json`.
 
 **Run tests:**
 
@@ -162,7 +165,7 @@ To distribute the update, update the versions in `requirements.txt` and rebuild 
 - The highest resolution across separate tracks and the absence of a watermark are not guaranteed. TikDrop does not add watermark removal.
 - The current app interface is in French; some yt-dlp messages are in English.
 
-The user has confirmed that the app works. Local checks and their limitations are documented in [VERIFICATION.md](VERIFICATION.md) (French).
+Checks (automated tests, real downloads, Windows build) and their limitations are documented in [VERIFICATION.md](VERIFICATION.md) (French).
 
 ## License and credits
 
