@@ -6,9 +6,12 @@ if errorlevel 1 goto error
 if errorlevel 1 goto error
 .venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --onedir --windowed --icon assets\tikdrop.ico --name TikDrop --collect-all yt_dlp --collect-all curl_cffi app.py
 if errorlevel 1 goto error
-echo Executable disponible dans dist\TikDrop.
-pause
+.venv\Scripts\python.exe distribution\assemble.py
+if errorlevel 1 goto error
+echo Executable disponible dans dist\TikDrop, archive dans dist\TikDrop-Windows.zip.
+if not defined CI pause
 exit /b 0
 :error
 echo Echec de construction.
-pause
+if not defined CI pause
+exit /b 1

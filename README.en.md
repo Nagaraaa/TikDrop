@@ -137,6 +137,8 @@ python3 -m venv .venv
 | `assets/tikdrop.ico` | Windows executable icon. |
 | `test_core.py` | Engine tests using simulated data. |
 | `Construire.cmd` | Windows build using PyInstaller. |
+| `distribution/` | README shipped in the ZIP and archive assembly script. |
+| `.github/` | Continuous integration (GitHub Actions) and Dependabot. |
 
 Each video downloads in a subprocess to keep the interface responsive and allow cancellation. The chosen folder is stored in `%APPDATA%\TikDrop\settings.json`.
 
@@ -146,7 +148,7 @@ Each video downloads in a subprocess to keep the interface responsive and allow 
 .\.venv\Scripts\python.exe -m unittest -v
 ```
 
-**Build for Windows:** open `Construire.cmd`. Output is placed in `dist\TikDrop`; distribute that entire folder.
+**Build for Windows:** open `Construire.cmd`. Output is placed in `dist\TikDrop`, and the ready-to-ship archive in `dist\TikDrop-Windows.zip`.
 
 **Update the engine when running from source:**
 
@@ -155,6 +157,10 @@ Each video downloads in a subprocess to keep the interface responsive and allow 
 ```
 
 To distribute the update, update the versions in `requirements.txt` and rebuild the app. The portable build does not update itself automatically.
+
+**Continuous integration:** on every pull request and on `main`, GitHub Actions runs the tests (Python 3.12 and 3.14), builds the executable with `Construire.cmd`, checks that it starts and loads the engine, then provides `TikDrop-Windows.zip` as an artifact. Dependabot opens a daily pull request for new yt-dlp and curl-cffi versions.
+
+**Publish a release:** update `VERSION` in `app.py` (and the versions in `THIRD_PARTY.md` and `VERIFICATION.md`), then push a matching `vX.Y.Z` tag. A draft release is created with `TikDrop-Windows.zip` and `TikDrop-Sources.zip`: complete the notes, then publish it.
 
 ## Scope and limitations
 
