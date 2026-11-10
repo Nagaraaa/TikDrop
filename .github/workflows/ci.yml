@@ -6,6 +6,11 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: Create the draft release vX.Y.Z (VERSION in app.py) from main
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -66,20 +71,22 @@ jobs:
 
   release:
     name: Draft release
-    if: startsWith(github.ref, 'refs/tags/v')
+    # A pushed vX.Y.Z tag, or the "Run workflow" button on main with "release" ticked.
+    if: startsWith(github.ref, 'refs/tags/v') || (inputs.release && github.ref == 'refs/heads/main')
     needs: windows
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - name: Tag must match VERSION in app.py
+      - name: Release tag from VERSION in app.py
         run: |
-          version=$(sed -n "s/^VERSION = '\(.*\)'$/\1/p" app.py)
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match VERSION = '$version' in app.py"
+          tag="v$(sed -n "s/^VERSION = '\(.*\)'$/\1/p" app.py)"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "$tag" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match VERSION in app.py ($tag)"
             exit 1
           fi
+          echo "TAG=$tag" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@v8
         with:
           name: TikDrop-Windows
@@ -88,5 +95,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" release/TikDrop-Windows.zip release/TikDrop-Sources.zip \
-            --draft --title "TikDrop $GITHUB_REF_NAME" --generate-notes
+          if [ "$GITHUB_REF_TYPE" = branch ]; then
+            # Fails if the tag already exists, so a release is never moved silently.
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA" --silent \
+              || { echo "::error::Tag $TAG already exists: bump VERSION in app.py first"; exit 1; }
+          fi
+          gh release create "$TAG" release/TikDrop-Windows.zip release/TikDrop-Sources.zip \
+            --draft --title "TikDrop $TAG" --generate-notes
